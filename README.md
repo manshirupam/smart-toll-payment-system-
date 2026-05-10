@@ -170,7 +170,9 @@ docker run -p 8080:8080 smart-toll-system
 ## 📱 Screenshots
 
 > Add screenshots of your login page, dashboard, and admin panel here
-[Image Alt](image_url)
+[Image Alt](https://github.com/manshirupam/smart-toll-payment-system-/blob/0d425247ac0e70414831aafe0171c8df005677a0/%20%20Transactions%202026-05-11%20at%2001.47.53.jpeg)
+> [Image Alt]
+> 
 ---
 
 ## 🤝 Contributing
