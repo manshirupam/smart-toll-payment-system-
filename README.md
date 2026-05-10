@@ -170,7 +170,7 @@ docker run -p 8080:8080 smart-toll-system
 ## 📱 Screenshots
 
 > Add screenshots of your login page, dashboard, and admin panel here
-
+[Image Alt](image_url)
 ---
 
 ## 🤝 Contributing
