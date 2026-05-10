@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Vehicles - Smart Toll System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .navbar-brand { color: white !important; font-weight: 700; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.08); }
+        .sidebar { min-height: calc(100vh - 56px); background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
+        .sidebar .nav-link { color: #555; padding: 12px 20px; border-radius: 10px; margin: 3px 10px; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background: #f0eeff; color: #667eea; }
+        .main-content { padding: 2rem; }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); border: none; }
+        .vehicle-card { border-radius: 15px; border: none; box-shadow: 0 2px 15px rgba(0,0,0,0.08); transition: transform 0.2s; }
+        .vehicle-card:hover { transform: translateY(-3px); }
+        .vehicle-icon { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; }
+        .fastag-badge { background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
+        .modal-content { border-radius: 15px; border: none; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg px-4">
+    <a class="navbar-brand fw-bold" href="/dashboard"><i class="bi bi-shield-check"></i> Smart Toll System</a>
+    <div class="ms-auto d-flex align-items-center gap-3">
+        <span id="nav-user-name" class="text-white"></span>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+</nav>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 sidebar py-3">
+            <ul class="nav flex-column">
+                <li><a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                <li><a class="nav-link active" href="/vehicles"><i class="bi bi-car-front me-2"></i>My Vehicles</a></li>
+                <li><a class="nav-link" href="/wallet"><i class="bi bi-wallet2 me-2"></i>Wallet</a></li>
+                <li><a class="nav-link" href="/toll"><i class="bi bi-sign-turn-right me-2"></i>Pay Toll</a></li>
+                <li><a class="nav-link" href="/admin" style="color:#e74c3c">
+                    <i class="bi bi-shield-fill me-2"></i>Admin Panel
+                </a></li>
+            </ul>
+        </div>
+        <div class="col-md-10 main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold mb-0">My Vehicles</h4>
+                <button class="btn btn-primary px-4" data-bs-toggle="modal" data-bs-target="#addVehicleModal">
+                    <i class="bi bi-plus-lg"></i> Add Vehicle
+                </button>
+            </div>
+            <div id="alert-box"></div>
+            <div class="row g-3" id="vehicles-container">
+                <div class="col-12 text-center text-muted py-5">
+                    <i class="bi bi-car-front fs-1 d-block mb-2"></i>
+                    Loading vehicles...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-2">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-car-front"></i> Add New Vehicle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-alert"></div>
+                <div class="mb-3">
+                    <label class="form-label">Registration Number</label>
+                    <input type="text" class="form-control" id="regNumber" placeholder="e.g. DL01AB5678">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">FASTag ID</label>
+                    <input type="text" class="form-control" id="fastagId" placeholder="e.g. FTAG002">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Vehicle Type</label>
+                    <select class="form-select" id="vehicleType">
+                        <option value="CAR">Car</option>
+                        <option value="TRUCK">Truck</option>
+                        <option value="BUS">Bus</option>
+                        <option value="BIKE">Bike</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary px-4" onclick="addVehicle()">Add Vehicle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API = 'http://localhost:8080';
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!token) window.location.href = '/login';
+    document.getElementById('nav-user-name').textContent = 'Hi, ' + (user.name || '');
+    function logout() { localStorage.clear(); window.location.href = '/login'; }
+    function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
+
+    const vehicleIcons = { CAR: 'bi-car-front', TRUCK: 'bi-truck', BUS: 'bi-bus-front', BIKE: 'bi-bicycle' };
+
+    async function loadVehicles() {
+        const vehicles = await fetch(API + '/api/vehicles', { headers: authHeaders() }).then(r => r.json());
+        const container = document.getElementById('vehicles-container');
+        if (!vehicles.length) {
+            container.innerHTML = `<div class="col-12 text-center text-muted py-5">
+                <i class="bi bi-car-front fs-1 d-block mb-2"></i>
+                <p>No vehicles added yet.</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal">Add your first vehicle</button>
+            </div>`;
+            return;
+        }
+        container.innerHTML = vehicles.map(v => `
+            <div class="col-md-4">
+                <div class="card vehicle-card p-3">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="vehicle-icon">
+                            <i class="bi ${vehicleIcons[v.vehicleType] || 'bi-car-front'} text-white fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold fs-5">${v.regNumber}</div>
+                            <div class="text-muted small">${v.vehicleType}</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fastag-badge"><i class="bi bi-wifi"></i> ${v.fastagId}</span>
+                        ${v.blacklisted ? '<span class="badge bg-danger">Blacklisted</span>' : '<span class="badge bg-success">Active</span>'}
+                    </div>
+                </div>
+            </div>`).join('');
+    }
+
+    async function addVehicle() {
+        const data = {
+            regNumber: document.getElementById('regNumber').value,
+            fastagId: document.getElementById('fastagId').value,
+            vehicleType: document.getElementById('vehicleType').value
+        };
+        const res = await fetch(API + '/api/vehicles', {
+            method: 'POST', headers: authHeaders(), body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('addVehicleModal')).hide();
+            document.getElementById('alert-box').innerHTML = '<div class="alert alert-success">Vehicle added successfully!</div>';
+            setTimeout(() => document.getElementById('alert-box').innerHTML = '', 3000);
+            loadVehicles();
+        } else {
+            document.getElementById('modal-alert').innerHTML = '<div class="alert alert-danger">Failed to add vehicle. Check if registration number or FASTag already exists.</div>';
+        }
+    }
+    loadVehicles();
+</script>
+</body>
+</html>

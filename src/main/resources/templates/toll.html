@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pay Toll - Smart Toll System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .navbar-brand { color: white !important; font-weight: 700; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.08); }
+        .sidebar { min-height: calc(100vh - 56px); background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
+        .sidebar .nav-link { color: #555; padding: 12px 20px; border-radius: 10px; margin: 3px 10px; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background: #f0eeff; color: #667eea; }
+        .main-content { padding: 2rem; }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); border: none; }
+        .booth-card { border-radius: 15px; border: 2px solid #e0e0e0; padding: 1.5rem; cursor: pointer; transition: all 0.2s; background: white; }
+        .booth-card:hover, .booth-card.selected { border-color: #667eea; background: #f0eeff; }
+        .booth-card.selected .booth-fee { color: #667eea; font-weight: 700; }
+        .pay-btn { background: linear-gradient(135deg, #667eea, #764ba2); border: none; padding: 15px; font-size: 1.1rem; border-radius: 12px; }
+        .receipt-card { background: linear-gradient(135deg, #11998e, #38ef7d); border-radius: 15px; padding: 2rem; color: white; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg px-4">
+    <a class="navbar-brand fw-bold" href="/dashboard"><i class="bi bi-shield-check"></i> Smart Toll System</a>
+    <div class="ms-auto d-flex align-items-center gap-3">
+        <span id="nav-user-name" class="text-white"></span>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+</nav>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 sidebar py-3">
+            <ul class="nav flex-column">
+                <li><a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                <li><a class="nav-link" href="/vehicles"><i class="bi bi-car-front me-2"></i>My Vehicles</a></li>
+                <li><a class="nav-link" href="/wallet"><i class="bi bi-wallet2 me-2"></i>Wallet</a></li>
+                <li><a class="nav-link active" href="/toll"><i class="bi bi-sign-turn-right me-2"></i>Pay Toll</a></li>
+                <li><a class="nav-link" href="/admin" style="color:#e74c3c">
+                    <i class="bi bi-shield-fill me-2"></i>Admin Panel
+                </a></li>
+            </ul>
+        </div>
+        <div class="col-md-10 main-content">
+            <h4 class="fw-bold mb-4">Pay Toll <span class="badge bg-success fs-6 ms-2">FASTag Simulation</span></h4>
+            <div id="alert-box"></div>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card p-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-car-front"></i> Select Vehicle</h6>
+                        <select class="form-select mb-4" id="vehicle-select">
+                            <option value="">Loading vehicles...</option>
+                        </select>
+                        <h6 class="fw-bold mb-3"><i class="bi bi-geo-alt"></i> Select Toll Booth</h6>
+                        <div id="booths-container" class="d-flex flex-column gap-2"></div>
+                        <input type="hidden" id="selected-booth">
+                        <button class="btn pay-btn text-white w-100 mt-4" onclick="payToll()">
+                            <i class="bi bi-wifi"></i> Pay via FASTag
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card p-4 mb-3">
+                        <h6 class="fw-bold mb-2"><i class="bi bi-wallet2"></i> Current Balance</h6>
+                        <div class="display-6 fw-bold text-primary" id="balance">₹0.00</div>
+                    </div>
+                    <div id="receipt-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API = 'http://localhost:8080';
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!token) window.location.href = '/login';
+    document.getElementById('nav-user-name').textContent = 'Hi, ' + (user.name || '');
+    function logout() { localStorage.clear(); window.location.href = '/login'; }
+    function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
+
+    let selectedBoothId = null;
+    let selectedBoothFee = 0;
+
+    async function loadPage() {
+        const vehicles = await fetch(API + '/api/vehicles', { headers: authHeaders() }).then(r => r.json());
+        const sel = document.getElementById('vehicle-select');
+        sel.innerHTML = vehicles.length
+            ? vehicles.map(v => `<option value="${v.fastagId}">${v.regNumber} (${v.fastagId})</option>`).join('')
+            : '<option value="">No vehicles registered</option>';
+
+        const booths = await fetch(API + '/api/toll/booths', { headers: authHeaders() }).then(r => r.json());
+        document.getElementById('booths-container').innerHTML = booths.map(b => `
+            <div class="booth-card" onclick="selectBooth(${b.id}, ${b.feeAmount}, this)">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold">${b.name}</div>
+                        <div class="text-muted small"><i class="bi bi-geo-alt"></i> ${b.location}</div>
+                    </div>
+                    <div class="booth-fee fs-5">₹${b.feeAmount}</div>
+                </div>
+            </div>`).join('');
+
+        const wallet = await fetch(API + '/api/wallet', { headers: authHeaders() }).then(r => r.json());
+        document.getElementById('balance').textContent = '₹' + wallet.balance.toFixed(2);
+    }
+
+    function selectBooth(id, fee, el) {
+        document.querySelectorAll('.booth-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedBoothId = id;
+        selectedBoothFee = fee;
+    }
+
+    async function payToll() {
+        const fastagId = document.getElementById('vehicle-select').value;
+        if (!fastagId) { alert('Please select a vehicle!'); return; }
+        if (!selectedBoothId) { alert('Please select a toll booth!'); return; }
+        const res = await fetch(`${API}/api/toll/pay?fastagId=${fastagId}&boothId=${selectedBoothId}`, {
+            method: 'POST', headers: authHeaders()
+        });
+        const txn = await res.json();
+        if (txn.status === 'SUCCESS') {
+            document.getElementById('receipt-box').innerHTML = `
+                <div class="receipt-card">
+                    <div class="text-center mb-3"><i class="bi bi-check-circle fs-1"></i></div>
+                    <h5 class="text-center fw-bold">Payment Successful!</h5>
+                    <hr style="border-color:rgba(255,255,255,0.3)">
+                    <div class="d-flex justify-content-between"><span>Amount Paid</span><span class="fw-bold">₹${txn.amount}</span></div>
+                    <div class="d-flex justify-content-between mt-2"><span>Transaction ID</span><span>#${txn.id}</span></div>
+                    <div class="d-flex justify-content-between mt-2"><span>Status</span><span class="fw-bold">SUCCESS</span></div>
+                </div>`;
+        } else {
+            document.getElementById('receipt-box').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Payment Failed!</strong> Insufficient balance. Please recharge your wallet.
+                    <a href="/wallet" class="btn btn-sm btn-danger mt-2 d-block">Recharge Now</a>
+                </div>`;
+        }
+        loadPage();
+    }
+    loadPage();
+</script>
+</body>
+</html>

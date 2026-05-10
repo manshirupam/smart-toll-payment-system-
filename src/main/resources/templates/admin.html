@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Smart Toll System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        .navbar-brand { color: white !important; font-weight: 700; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.08); }
+        .sidebar { min-height: calc(100vh - 56px); background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
+        .sidebar .nav-link { color: #555; padding: 12px 20px; border-radius: 10px; margin: 3px 10px; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background: #ffeaea; color: #e74c3c; }
+        .main-content { padding: 2rem; }
+        .btn-danger-custom { background: linear-gradient(135deg, #e74c3c, #c0392b); border: none; color: white; }
+        .stat-card { border-radius: 15px; padding: 1.5rem; color: white; }
+        .stat-card.red { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .stat-card.blue { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .stat-card.green { background: linear-gradient(135deg, #11998e, #38ef7d); color: #1a1a1a; }
+        .nav-tabs .nav-link { color: #555; border-radius: 10px 10px 0 0; }
+        .nav-tabs .nav-link.active { color: #e74c3c; border-bottom-color: white; font-weight: 500; }
+        .badge-success-custom { background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; }
+        .badge-danger-custom { background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; }
+        .modal-content { border-radius: 15px; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg px-4">
+    <a class="navbar-brand fw-bold" href="/admin">
+        <i class="bi bi-shield-fill"></i> Admin Panel
+    </a>
+    <div class="ms-auto d-flex align-items-center gap-3">
+        <span class="text-white">Administrator</span>
+        <a href="/dashboard" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to App
+        </a>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()">
+            <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+    </div>
+</nav>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 sidebar py-3">
+            <ul class="nav flex-column">
+                <li><a class="nav-link active" href="/admin"><i class="bi bi-speedometer2 me-2"></i>Overview</a></li>
+                <li><a class="nav-link" href="#" onclick="showTab('booths')"><i class="bi bi-geo-alt me-2"></i>Toll Booths</a></li>
+                <li><a class="nav-link" href="#" onclick="showTab('users')"><i class="bi bi-people me-2"></i>Users</a></li>
+                <li><a class="nav-link" href="#" onclick="showTab('transactions')"><i class="bi bi-receipt me-2"></i>Transactions</a></li>
+            </ul>
+        </div>
+        <div class="col-md-10 main-content">
+            <div id="alert-box"></div>
+
+            <!-- Stats -->
+            <div class="row g-3 mb-4" id="stats-section">
+                <div class="col-md-4">
+                    <div class="stat-card blue">
+                        <div class="small mb-1 opacity-75"><i class="bi bi-people"></i> Total Users</div>
+                        <div class="fs-2 fw-bold" id="total-users">0</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card green">
+                        <div class="small mb-1 opacity-75"><i class="bi bi-geo-alt"></i> Active Booths</div>
+                        <div class="fs-2 fw-bold" id="total-booths">0</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card red">
+                        <div class="small mb-1 opacity-75"><i class="bi bi-receipt"></i> Total Transactions</div>
+                        <div class="fs-2 fw-bold" id="total-transactions">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toll Booths Tab -->
+            <div id="tab-booths" class="tab-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-geo-alt"></i> Toll Booths</h5>
+                    <button class="btn btn-danger-custom px-3"
+                            data-bs-toggle="modal" data-bs-target="#addBoothModal">
+                        <i class="bi bi-plus-lg"></i> Add Booth
+                    </button>
+                </div>
+                <div class="card p-3">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                        <tr><th>ID</th><th>Name</th><th>Location</th><th>Fee</th><th>Status</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="booths-body">
+                        <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="tab-users" class="tab-section" style="display:none">
+                <h5 class="fw-bold mb-3"><i class="bi bi-people"></i> All Users</h5>
+                <div class="card p-3">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                        <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr>
+                        </thead>
+                        <tbody id="users-body">
+                        <tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Transactions Tab -->
+            <div id="tab-transactions" class="tab-section" style="display:none">
+                <h5 class="fw-bold mb-3"><i class="bi bi-receipt"></i> All Transactions</h5>
+                <div class="card p-3">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                        <tr><th>ID</th><th>Vehicle</th><th>Booth</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+                        </thead>
+                        <tbody id="txns-body">
+                        <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Booth Modal -->
+<div class="modal fade" id="addBoothModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-2">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-geo-alt"></i> Add Toll Booth</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="booth-modal-alert"></div>
+                <div class="mb-3">
+                    <label class="form-label">Booth Name</label>
+                    <input type="text" class="form-control" id="booth-name" placeholder="e.g. Pune Highway Booth">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-control" id="booth-location" placeholder="e.g. NH-4 Pune">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Fee Amount (₹)</label>
+                    <input type="number" class="form-control" id="booth-fee" placeholder="e.g. 75">
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger-custom px-4" onclick="addBooth()">Add Booth</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API = 'http://localhost:8080';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login';
+    function logout() { localStorage.clear(); window.location.href = '/login'; }
+    function authHeaders() {
+        return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+    }
+
+    function showTab(tab) {
+        document.querySelectorAll('.tab-section').forEach(s => s.style.display = 'none');
+        document.getElementById('tab-' + tab).style.display = 'block';
+        document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+    }
+
+    async function loadAll() {
+        const [users, transactions, booths] = await Promise.all([
+            fetch(API + '/api/admin/users', { headers: authHeaders() }).then(r => r.json()),
+            fetch(API + '/api/admin/transactions', { headers: authHeaders() }).then(r => r.json()),
+            fetch(API + '/api/toll/booths', { headers: authHeaders() }).then(r => r.json())
+        ]);
+
+        document.getElementById('total-users').textContent = users.length || 0;
+        document.getElementById('total-booths').textContent = booths.length || 0;
+        document.getElementById('total-transactions').textContent = transactions.length || 0;
+
+        document.getElementById('booths-body').innerHTML = booths.map(b => `
+            <tr>
+                <td>${b.id}</td>
+                <td>${b.name}</td>
+                <td>${b.location}</td>
+                <td>₹${b.feeAmount}</td>
+                <td><span class="${b.active ? 'badge-success-custom' : 'badge-danger-custom'}">
+                    ${b.active ? 'Active' : 'Inactive'}</span></td>
+                <td><button class="btn btn-sm ${b.active ? 'btn-warning' : 'btn-success'}"
+                    onclick="toggleBooth(${b.id})">
+                    ${b.active ? 'Deactivate' : 'Activate'}</button></td>
+            </tr>`).join('');
+
+        document.getElementById('users-body').innerHTML = users.map(u => `
+            <tr>
+                <td>${u.id}</td>
+                <td>${u.name}</td>
+                <td>${u.email}</td>
+                <td><span class="badge ${u.role === 'ADMIN' ? 'bg-danger' : 'bg-primary'}">${u.role}</span></td>
+                <td>${new Date(u.createdAt).toLocaleDateString('en-IN')}</td>
+            </tr>`).join('');
+
+       document.getElementById('txns-body').innerHTML = transactions.map(t => `
+    <tr>
+        <td>#${t.id}</td>
+        <td>${t.vehicleReg || '-'}</td>
+        <td>${t.boothName || '-'}</td>
+        <td>₹${t.amount}</td>
+        <td><span class="${t.status === 'SUCCESS' ?
+            'badge-success-custom' : 'badge-danger-custom'}">${t.status}</span></td>
+        <td>${new Date(t.createdAt).toLocaleDateString('en-IN')}</td>
+    </tr>`).join('');
+    }
+
+    async function addBooth() {
+        const data = {
+            name: document.getElementById('booth-name').value,
+            location: document.getElementById('booth-location').value,
+            feeAmount: parseFloat(document.getElementById('booth-fee').value)
+        };
+        const res = await fetch(API + '/api/admin/booths', {
+            method: 'POST', headers: authHeaders(), body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('addBoothModal')).hide();
+            document.getElementById('alert-box').innerHTML =
+                '<div class="alert alert-success">Booth added successfully!</div>';
+            setTimeout(() => document.getElementById('alert-box').innerHTML = '', 3000);
+            loadAll();
+        } else {
+            document.getElementById('booth-modal-alert').innerHTML =
+                '<div class="alert alert-danger">Failed to add booth!</div>';
+        }
+    }
+
+    async function toggleBooth(id) {
+        await fetch(API + '/api/admin/booths/' + id + '/toggle', {
+            method: 'PUT', headers: authHeaders()
+        });
+        loadAll();
+    }
+
+    loadAll();
+</script>
+</body>
+</html>
