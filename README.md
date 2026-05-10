@@ -173,6 +173,7 @@ docker run -p 8080:8080 smart-toll-system
 [Image Alt](https://github.com/manshirupam/smart-toll-payment-system-/blob/0d425247ac0e70414831aafe0171c8df005677a0/%20%20Transactions%202026-05-11%20at%2001.47.53.jpeg)
 > [Image Alt](https://github.com/manshirupam/smart-toll-payment-system-/blob/cc5eddd22d40a73b3c091daa9787dac6eeb9f32f/%20%20Users%202026-05-11%20at%2001.43.28.jpeg)
 > [Image Alt](https://github.com/manshirupam/smart-toll-payment-system-/blob/079dff3531681a2f2d61df726826e22ee7627a50/%20%20Vehicles%202026-05-11%20at%2001.45.07.jpeg)
+> [Image Alt](https://github.com/manshirupam/smart-toll-payment-system-/blob/a9c04d9ad345efbe88d175f6b25f31857e246d8a/%20Dashboard%202026-05-11%20at%2001.40.47.jpeg)
 > [Image Alt](
 > 
 ---
